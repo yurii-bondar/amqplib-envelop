@@ -1,6 +1,6 @@
 {
   "name": "amqplib-envelop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A wrapper for working with RabbitMQ using the amqplib npm package",
   "repository": {
     "type": "git",
