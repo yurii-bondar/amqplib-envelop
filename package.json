@@ -1,0 +1,35 @@
+{
+  "name": "amqplib-envelop",
+  "version": "1.0.1",
+  "description": "A wrapper for working with RabbitMQ using the amqplib npm package",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yurii-bondar/amqplib-envelop.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "lint": "npx eslint ./"
+  },
+  "keywords": [
+    "rabbitmq",
+    "rabbit",
+    "amqplib",
+    "wrappers",
+    "envelops",
+    "helpers"
+  ],
+  "author": {
+    "name": "Yurii Bondar",
+    "email": "yurii.bondar.vn@gmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.22.9",
+    "eslint": "^8.46.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.28.0"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3"
+  }
+}
