@@ -146,8 +146,9 @@ class RabbitMQ {
    * @param {object|string} queueConfig - Queue configuration or just the queue name
    * (if specified as a string).
    * @param {function} callback - Message handler function.
+   * @param {object} consumerOptions - additional configurations for consume setting up
    */
-  async consume(queueConfig, callback) {
+  async consume(queueConfig, callback, consumerOptions) {
     try {
       const {
         name,
@@ -161,7 +162,7 @@ class RabbitMQ {
         durable,
         arguments: queueArguments,
       });
-      await this.channel.consume(name, callback);
+      await this.channel.consume(name, callback, consumerOptions);
     } catch (err) {
       console.error(`${__filename}/consume error:`, err?.message);
     }

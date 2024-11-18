@@ -178,6 +178,8 @@ module.exports = async (rabbitmq) => {
         rabbitmq.bindQueue(bindings.marvelDlx),
     ]);
 
-    await rabbitmq.consume(queues.marvel, consumer(rabbitmq));
+    await rabbitmq.consume(queues.marvel, consumer(rabbitmq), {
+        consumerTag: 'marvelApp:1.1.2'
+    });
 };
 ```
