@@ -6,6 +6,10 @@
 [Create connection](#create-connection)  
 [Using (server)](#using-server)
 <br>[Using (worker)](#using-worker)
+<br>[Automatic reconnect](#automatic-reconnect)
+<br>[Graceful shutdown](#graceful-shutdown)
+<br>[RPC (request/response over a queue)](#rpc)
+<br>[Tests](#tests)
 
 <a name="connection-configs"><h2>Connection configs</h2></a>
 ```js
@@ -22,6 +26,9 @@ module.exports = {
         password: 'guest',
         connectionName: `${pkg.name}-${pkg.version}`,
         vhost: '',
+        // optional, both default to the values shown below:
+        reconnect: true,
+        reconnectDelay: 5000, // ms between reconnect attempts
     }
 };
 ```
@@ -183,3 +190,141 @@ module.exports = async (rabbitmq) => {
     });
 };
 ```
+
+<a name="automatic-reconnect"><h2>Automatic reconnect</h2></a>
+```js
+// worker/marvelWorker.js
+
+const { exchanges, queues, bindings } = require('./constants/rabbitmq');
+
+const consumer = (rabbitmq) => async (msg) => {
+    const msgObj = rabbitmq.getMsgObj(msg);
+
+    console.log('message from queue: ', msgObj);
+    rabbitmq.ack(msg);
+};
+
+module.exports = async (rabbitmq) => {
+    // fired once the connection/channel are re-established after an unexpected drop,
+    // and all exchanges/queues/bindings/consumers below have been re-applied
+    rabbitmq.on('reconnect', () => console.log('RabbitMQ reconnected'));
+
+    await rabbitmq.assertExchange(exchanges.films);
+
+    await Promise.all([
+        rabbitmq.assertQueue(queues.marvel),
+        rabbitmq.assertQueue(queues.marvelDlx),
+    ]);
+
+    await rabbitmq.bindQueue(bindings.marvel);
+
+    // undo a binding made earlier, so it isn't re-applied on the next reconnect either
+    await rabbitmq.unbindQueue(bindings.marvelDlx);
+
+    await rabbitmq.consume(queues.marvel, consumer(rabbitmq));
+};
+```
+```js
+// config/default.js
+
+module.exports = {
+    rabbitmq: {
+        // ...
+        reconnect: false, // set to disable auto-reconnect, default is true
+        reconnectDelay: 10000, // ms between reconnect attempts, default is 5000
+    }
+};
+```
+
+<a name="graceful-shutdown"><h2>Graceful shutdown</h2></a>
+```js
+// worker/index.js
+
+const RabbitMQ = require('amqplib-envelop');
+const rabbitmq = require('./helpers/rabbitmq');
+
+const marvelWorker = require('./marvelWorker');
+
+// closes the active connection on SIGINT/SIGTERM and exits, replaces a manual stop()
+RabbitMQ.registerGracefulShutdown();
+
+module.exports = {
+    start: async () => {
+        const rabbitInstance = await rabbitmq();
+
+        await marvelWorker(rabbitInstance);
+    },
+};
+```
+
+<a name="rpc"><h2>RPC (request/response over a queue)</h2></a>
+```js
+// rpc/marvelRpcServer.js
+
+const RabbitMQ = require('amqplib-envelop');
+const rabbitmq = require('../helpers/rabbitmq');
+
+module.exports = async () => {
+    const rabbitInstance = await rabbitmq();
+
+    const rpcServer = new RabbitMQ.RpcServer(rabbitInstance, 'marvel.rpc');
+
+    rpcServer.addCommand('getMovie', async (title) => ({ title, year: 2019 }));
+
+    await rpcServer.start();
+
+    return rpcServer;
+};
+```
+```js
+// rpc/marvelRpcClient.js
+
+const RabbitMQ = require('amqplib-envelop');
+const rabbitmq = require('../helpers/rabbitmq');
+
+async function getMovie(title) {
+    const rabbitInstance = await rabbitmq();
+
+    const rpcClient = new RabbitMQ.RpcClient(rabbitInstance, 'marvel.rpc', 5000 /* timeout, ms */);
+    await rpcClient.init();
+
+    // rejects if the server responds with an error, or nothing replies within the timeout
+    return rpcClient.sendCommand('getMovie', [title]);
+}
+
+module.exports = { getMovie };
+```
+```js
+// worker/index.js
+
+const rabbitmq = require('./helpers/rabbitmq');
+const marvelRpcServer = require('./rpc/marvelRpcServer');
+
+module.exports = {
+    start: async () => {
+        await rabbitmq();
+        await marvelRpcServer();
+    },
+};
+
+// server/movieController.js
+
+const { getMovie } = require('./rpc/marvelRpcClient');
+
+async function getMovieHandler(req, res) {
+    const movie = await getMovie(req.params.title);
+    res.json(movie);
+}
+
+// every RpcServer also registers a default 'ping' command out of the box:
+// await rpcClient.sendCommand('ping'); // -> 'pong'
+```
+
+<a name="tests"><h2>Tests</h2></a>
+```bash
+npm test              # run the unit test suite (jest)
+npm run test:coverage # same, with a coverage report
+```
+`amqplib` itself is mocked in the tests (`test/helpers/amqpMocks.js`), so no running RabbitMQ
+server is required.
+
