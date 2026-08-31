@@ -1,15 +1,15 @@
 # A wrapper for working with RabbitMQ using the amqplib npm package
 
->#### Content
->[Connection configs](#connection-configs)   
-[Setup configs](#setup-configs)     
-[Create connection](#create-connection)  
-[Using (server)](#using-server)
-<br>[Using (worker)](#using-worker)
-<br>[Automatic reconnect](#automatic-reconnect)
-<br>[Graceful shutdown](#graceful-shutdown)
-<br>[RPC (request/response over a queue)](#rpc)
-<br>[Tests](#tests)
+> #### Content
+> [Connection configs](#connection-configs)<br>
+> [Setup configs](#setup-configs)<br>
+> [Create connection](#create-connection)<br>
+> [Using (server)](#using-server)<br>
+> [Using (worker)](#using-worker)<br>
+> [Automatic reconnect](#automatic-reconnect)<br>
+> [Graceful shutdown](#graceful-shutdown)<br>
+> [RPC (request/response over a queue)](#rpc)<br>
+> [Tests](#tests)
 
 <a name="connection-configs"><h2>Connection configs</h2></a>
 ```js
